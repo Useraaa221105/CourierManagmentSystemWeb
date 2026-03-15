@@ -3,6 +3,8 @@ import { api, buildEndpoint } from '../api/endpoints.js'
 import { useAuth } from '../state/AuthContext.jsx'
 import { formatNumber, formatCurrency, isValidDate } from '../utils/format.js'
 import { PAGINATION, ERROR_MESSAGES } from '../constants.js'
+import { loadWithStandardPattern } from '../utils/apiHelpers.js'
+import { updateFormField } from '../utils/formHelpers.js'
 
 
 const MIN_WEIGHT = 0.01
@@ -111,20 +113,10 @@ export default function ProductsPage() {
   }, [products])
 
   const loadProducts = async () => {
-    setLoading(true)
-    setError(null)
-
-    
-    const requestStartTime = Date.now()
-
-    try {
-      const data = await api.products.list(token)
-      setProducts(data)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    await loadWithStandardPattern(
+      () => api.products.list(token),
+      { setLoading, setError, setProducts }
+    )
   }
 
   useEffect(() => {
@@ -133,8 +125,7 @@ export default function ProductsPage() {
   }, [token])
 
   const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    updateFormField(setForm, event)
   }
 
   
@@ -247,7 +238,8 @@ export default function ProductsPage() {
       `"${p.name}",${p.weight},${p.length},${p.width},${p.height},${p.volume}`
     )
     const csv = [header, ...rows].join('\n')
-    console.log('Export CSV:', csv)
+    // TODO: Use exportToCsv utility from csvExport.js
+    console.log('CSV export functionality should be moved to utility')
   }
 
   return (

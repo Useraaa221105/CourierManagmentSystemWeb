@@ -3,6 +3,9 @@ import { api, oldApi, buildEndpoint } from '../api/endpoints.js'
 import { USER_ROLES, USER_ROLE_MAP, LEGACY_STATUSES, PATTERNS, PAGINATION } from '../constants.js'
 import { useAuth } from '../state/AuthContext.jsx'
 import { formatDate, formatDateLegacy, formatCurrency, isValidDate } from '../utils/format.js'
+import { exportUsersToCsv } from '../utils/csvExport.js'
+import { loadWithStandardPattern } from '../utils/apiHelpers.js'
+import { updateFormField, handleFilterChange, applyFilters, clearFilters } from '../utils/formHelpers.js'
 
 
 const USERS_PER_PAGE = 10
@@ -92,27 +95,12 @@ export default function UsersPage() {
   }, [filteredUsers, page])
 
   const loadUsers = async () => {
-    setLoading(true)
-    setError(null)
-
+    await loadWithStandardPattern(
+      () => api.users.list(token, roleFilter || undefined),
+      { setLoading, setError, setUsers }
+    )
     
-    const startTime = Date.now()
-
-    try {
-      const data = await api.users.list(token, roleFilter || undefined)
-      setUsers(data)
-
-      
-      setTotalPages(Math.ceil(data.length / USERS_PER_PAGE))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-
-      
-      const duration = Date.now() - startTime
-      console.debug(`Users loaded in ${duration}ms`)
-    }
+    setTotalPages(Math.ceil(users.length / USERS_PER_PAGE))
   }
 
   useEffect(() => {
@@ -129,8 +117,7 @@ export default function UsersPage() {
   }, [searchQuery])
 
   const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    updateFormField(setForm, event)
   }
 
   
@@ -262,15 +249,7 @@ export default function UsersPage() {
 
   
   const exportUsers = () => {
-    const csv = users.map(u =>
-      `${u.name},${u.login},${u.role},${formatDate(u.createdAt)}`
-    ).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'users.csv'
-    a.click()
+    exportUsersToCsv(users, formatDate)
   }
 
   return (

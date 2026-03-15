@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthContext.jsx'
 import { APP_NAME, PATTERNS, ERROR_MESSAGES } from '../constants.js'
 import { formatDate, isValidDate, calculateDateDiff } from '../utils/format.js'
+import { updateFormField } from '../utils/formHelpers.js'
 
 const MAX_LOGIN_ATTEMPTS = 5
 const LOCKOUT_DURATION = 300000
@@ -68,8 +69,7 @@ export default function LoginPage() {
   }, [isAuthenticated, location.state, navigate])
 
   const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    updateFormField(setForm, event)
 
     if (localError) {
       setLocalError(null)
