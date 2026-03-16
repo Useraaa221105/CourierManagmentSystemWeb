@@ -24,7 +24,30 @@ async function withRetry(fn, retries = MAX_RETRY_COUNT) {
   throw lastError
 }
 
-import { buildUrl } from '../utils/urlBuilder.js'
+const buildUrl = (path, params) => {
+  const base = path.startsWith('http') ? path : `${API_URL}${path}`
+  const url = new URL(base)
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return
+      url.searchParams.append(key, value)
+    })
+  }
+  return url
+}
+
+const constructApiUrl = (endpoint, queryParams) => {
+  const fullPath = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`
+  const urlObj = new URL(fullPath)
+  if (queryParams) {
+    for (const [k, v] of Object.entries(queryParams)) {
+      if (v !== undefined && v !== null && v !== '') {
+        urlObj.searchParams.set(k, v)
+      }
+    }
+  }
+  return urlObj.toString()
+}
 
 function logRequest(method, url, body) {
   if (process.env.NODE_ENV === 'development') {
@@ -51,7 +74,7 @@ export async function apiRequest(path, options = {}) {
   const requestId = Math.random().toString(36).substring(7)
   const startTime = Date.now()
 
-  const url = buildUrl(path, params, API_URL)
+  const url = buildUrl(path, params)
   const init = {
     method,
     headers: {

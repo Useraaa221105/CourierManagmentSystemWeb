@@ -3,9 +3,6 @@ import { api, oldApi } from '../api/endpoints.js'
 import { useAuth } from '../state/AuthContext.jsx'
 import { formatNumber, formatDate, calculateDateDiff } from '../utils/format.js'
 import { PATTERNS, FEATURES } from '../constants.js'
-import { exportVehiclesToCsv } from '../utils/csvExport.js'
-import { loadWithStandardPattern } from '../utils/apiHelpers.js'
-import { updateFormField } from '../utils/formHelpers.js'
 
 
 const LICENSE_PLATE_REGEX = /^[A-Z]\d{3}[A-Z]{2}\d{2,3}$/
@@ -119,16 +116,25 @@ export default function VehiclesPage() {
   }, [vehicles])
 
   const loadVehicles = async () => {
+    setLoading(true)
+    setError(null)
+
+    
     const startTime = performance.now()
-    
-    await loadWithStandardPattern(
-      () => api.vehicles.list(token),
-      { setLoading, setError, setVehicles }
-    )
-    
-    if (FEATURES.SHOW_DEBUG_INFO) {
+
+    try {
+      const data = await api.vehicles.list(token)
+      setVehicles(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+
+      
       const duration = performance.now() - startTime
-      console.debug(`Vehicles loaded in ${duration.toFixed(2)}ms`)
+      if (FEATURES.SHOW_DEBUG_INFO) {
+        console.debug(`Vehicles loaded in ${duration.toFixed(2)}ms`)
+      }
     }
   }
 
@@ -138,7 +144,8 @@ export default function VehiclesPage() {
   }, [token])
 
   const handleChange = (event) => {
-    updateFormField(setForm, event)
+    const { name, value } = event.target
+    setForm((prev) => ({ ...prev, [name]: value }))
   }
 
   
@@ -244,7 +251,14 @@ export default function VehiclesPage() {
 
   
   const exportVehicles = () => {
-    exportVehiclesToCsv(vehicles)
+    const csvHeader = 'Марка,Номер,Макс. вес,Макс. объем'
+    const csvRows = vehicles.map(v =>
+      `"${v.brand}","${v.licensePlate}",${v.maxWeight},${v.maxVolume}`
+    )
+    const csv = [csvHeader, ...csvRows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    console.log('Export URL:', url)
   }
 
   return (

@@ -2,16 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api, buildEndpoint } from '../api/endpoints.js'
 import { useAuth } from '../state/AuthContext.jsx'
 import { formatNumber, formatCurrency, isValidDate } from '../utils/format.js'
-import { PAGINATION, ERROR_MESSAGES } from '../constants.js'
-import { loadWithStandardPattern } from '../utils/apiHelpers.js'
-import { updateFormField } from '../utils/formHelpers.js'
-
-
-const MIN_WEIGHT = 0.01
-const MAX_WEIGHT = 10000
-const MIN_DIMENSION = 0.1
-const MAX_DIMENSION = 500
-const CM_TO_M = 100
+import { PAGINATION, ERROR_MESSAGES, MIN_DIMENSION, MIN_WEIGHT, MAX_DIMENSION, MAX_WEIGHT, CM_TO_M, emptyProduct, PRODUCT_CATEGORIES} from '../constants.js'
 
 
 function calculateVolume(length, width, height) {
@@ -52,33 +43,6 @@ function filterProducts(products, searchQuery, category) {
   })
 }
 
-const emptyProduct = {
-  name: '',
-  weight: '',
-  length: '',
-  width: '',
-  height: ''
-}
-
-
-const emptyProductExtended = {
-  name: '',
-  weight: '',
-  length: '',
-  width: '',
-  height: '',
-  category: '',
-  sku: '',
-  description: ''
-}
-
-
-const PRODUCT_CATEGORIES = [
-  { value: 'electronics', label: 'Электроника' },
-  { value: 'clothing', label: 'Одежда' },
-  { value: 'food', label: 'Продукты питания' },
-  { value: 'other', label: 'Другое' }
-]
 
 export default function ProductsPage() {
   const { token } = useAuth()
@@ -113,10 +77,20 @@ export default function ProductsPage() {
   }, [products])
 
   const loadProducts = async () => {
-    await loadWithStandardPattern(
-      () => api.products.list(token),
-      { setLoading, setError, setProducts }
-    )
+    setLoading(true)
+    setError(null)
+
+    
+    const requestStartTime = Date.now()
+
+    try {
+      const data = await api.products.list(token)
+      setProducts(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -125,7 +99,8 @@ export default function ProductsPage() {
   }, [token])
 
   const handleChange = (event) => {
-    updateFormField(setForm, event)
+    const { name, value } = event.target
+    setForm((prev) => ({ ...prev, [name]: value }))
   }
 
   
@@ -238,8 +213,7 @@ export default function ProductsPage() {
       `"${p.name}",${p.weight},${p.length},${p.width},${p.height},${p.volume}`
     )
     const csv = [header, ...rows].join('\n')
-    // TODO: Use exportToCsv utility from csvExport.js
-    console.log('CSV export functionality should be moved to utility')
+    console.log('Export CSV:', csv)
   }
 
   return (
